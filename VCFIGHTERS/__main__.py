@@ -12,7 +12,7 @@ log = LOGGER("VCFIGHTER")
 
 def validate_config():
     required = ["API_ID", "API_HASH", "BOT_TOKEN", "MONGO_URI", "OWNER_ID"]
-    missing = [k for k in required if getattr(Config, k, None) is None]
+    missing = [k for k in required if not getattr(Config, k, None)]
     if missing:
         LOGGER("Config").error(f"Missing config values: {missing}")
         exit(1)
@@ -25,7 +25,8 @@ def load_handlers():
     bot.py mein plugins=dict(...) NAHI hona chahiye — warna double registration hoga!
     """
     LOGGER("Loader").info("Injecting Handlers into Bot...")
-    for file in glob.glob("VCFIGHTERS/FIGHTERS/*.py"):
+    fighters_dir = os.path.join(os.path.dirname(__file__), "FIGHTERS")
+    for file in glob.glob(os.path.join(fighters_dir, "*.py")):
         name = os.path.basename(file)[:-3]
         if name != "__init__":
             try:
@@ -87,6 +88,10 @@ async def init():
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
     loop.run_until_complete(init())
     
