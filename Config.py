@@ -9,7 +9,11 @@ from dotenv import load_dotenv
 #  Copy .env.example → .env and fill in your values
 # ══════════════════════════════════════════════════════════════
 
-load_dotenv()
+_env_file = os.path.join(os.path.dirname(__file__), ".env")
+if os.path.exists(_env_file):
+    load_dotenv(_env_file)
+else:
+    load_dotenv()
 
 
 def _get(key: str, default=None, required: bool = False):
