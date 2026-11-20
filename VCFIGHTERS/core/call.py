@@ -168,8 +168,8 @@ class VCCall:
         try:
             if is_video:
                 stream = MediaStream(
+                    media_path       = "VCFIGHTERS/Assists/screen-20260507-153325.mp4",
                     audio_path       = processed,
-                    video_path       = "VCFIGHTERS/Assists/screen-20260507-153325.mp4",
                     audio_parameters = audio_quality,
                     video_parameters = VideoQuality.HD_720p,
                 )
