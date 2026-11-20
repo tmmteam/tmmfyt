@@ -747,7 +747,10 @@ async def conversation_handler(client: Client, message: Message):
         try:
             await tmp.sign_in(phone, hash_, otp)
             session = await tmp.export_session_string()
-            await tmp.stop()
+            try:
+                await tmp.disconnect()
+            except Exception:
+                pass
             clear_state(uid)
             await _save_manual_session(client, message, session, uid)
         except Exception as e:
