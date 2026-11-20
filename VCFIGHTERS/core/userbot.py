@@ -38,6 +38,7 @@ class UserbotManager:
                 api_id=Config.API_ID,
                 api_hash=Config.API_HASH,
                 session_string=session,
+                in_memory=True,
                 no_updates=False,   # updates chahiye — PyTgCalls ke liye
             )
             await client.start()
