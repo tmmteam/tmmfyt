@@ -632,19 +632,22 @@ async def cb_pings(client: Client, query: CallbackQuery):
 
 
 async def _show_pings(query: CallbackQuery):
-    from VCFIGHTERS.database.mangodb import db
+    from VCFIGHTERS.database.mangodb import db, _USE_FALLBACK
 
     t0     = time.monotonic()
     await query.answer()
     bot_ms = int((time.monotonic() - t0) * 1000)
 
-    try:
-        t0       = time.monotonic()
-        await db.command("ping")
-        mongo_ms = int((time.monotonic() - t0) * 1000)
-        mongo_str = f"{mongo_ms}ms"
-    except Exception:
-        mongo_str = "❌ ᴅєᴀᴅ"
+    if _USE_FALLBACK or db is None:
+        mongo_str = "📁 ʟᴏᴄᴀʟ ᴅʙ ✅"
+    else:
+        try:
+            t0       = time.monotonic()
+            await db.command("ping")
+            mongo_ms = int((time.monotonic() - t0) * 1000)
+            mongo_str = f"{mongo_ms}ms"
+        except Exception:
+            mongo_str = "❌ ᴅєᴀᴅ"
 
     userbots = await get_all_userbots()
     ub_lines = []
