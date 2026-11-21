@@ -105,6 +105,14 @@ async def _send_magic(
         payload.pop("has_spoiler", None)
         res = await _raw_api("sendPhoto", payload)
 
+    # HTML parse mode fail hua toh clean plain text se retry karo
+    if not res.get("ok") and ("parse" in str(res.get("description", "")).lower() or "entity" in str(res.get("description", "")).lower()):
+        log.warning(f"sendPhoto attempt 2 failed with parse error: {res.get('description')} — retrying as plain text")
+        import re
+        payload["caption"] = re.sub(r"<[^>]+>", "", caption)
+        payload.pop("parse_mode", None)
+        res = await _raw_api("sendPhoto", payload)
+
     if not res.get("ok"):
         log.error(f"sendPhoto failed completely: {res.get('description')}")
         return None
@@ -118,6 +126,19 @@ async def _send_magic(
     })
     if not kb_res.get("ok"):
         log.warning(f"editMessageReplyMarkup failed: {kb_res.get('description')}")
+        # Agar custom emoji id fail kare toh simplified buttons retry karo
+        simple_markup = []
+        for row in markup:
+            simple_row = []
+            for b in row:
+                cb = {k: v for k, v in b.items() if k != "icon_custom_emoji_id"}
+                simple_row.append(cb)
+            simple_markup.append(simple_row)
+        await _raw_api("editMessageReplyMarkup", {
+            "chat_id":      chat_id,
+            "message_id":   msg_id,
+            "reply_markup": {"inline_keyboard": simple_markup},
+        })
 
     return msg_id
 
@@ -196,26 +217,26 @@ async def _private_caption(mention: str) -> str:
 
     return (
         f"┌─── ˹ <b>ᴠᴄғɪɢʜᴛᴇʀ</b> ˼ ─── ⏤‌‌●\n"
-        f"<emoji id='5262770659267735289'>😈</emoji> ┆ <b>ʜᴇʏ, {mention}</b>\n"
-        f"<emoji id='6291835288561917135'>😎</emoji> ┆ <b>ɪ ᴀᴍ @{me.username}</b>\n"
+        f"😈 ┆ <b>ʜᴇʏ, {mention}</b>\n"
+        f"😎 ┆ <b>ɪ ᴀᴍ @{me.username}</b>\n"
         f"└──────────────────────•\n\n"
         f"<blockquote>"
-        f"<spoiler><b><emoji id='6294070144729619431'>💀</emoji> ᴛʜᴇ ᴜʟᴛɪᴍᴀᴛᴇ ᴠᴄ ғɪɢʜᴛᴇʀ ʙᴏᴛ!</b></spoiler>"
+        f"<spoiler><b>💀 ᴛʜᴇ ᴜʟᴛɪᴍᴀᴛᴇ ᴠᴄ ғɪɢʜᴛᴇʀ ʙᴏᴛ!</b></spoiler>"
         f"</blockquote>\n"
         f"<blockquote>"
-        f"<b><emoji id='6294063539069917326'>😉</emoji> ᴜᴘᴛɪᴍᴇ:</b> {_uptime()}\n"
-        f"<b><emoji id='5413415116756500503'>☠️</emoji> ᴄᴘᴜ ʟᴏᴀᴅ:</b> {cpu}%\n"
-        f"<b><emoji id='6080176744709495278'>🐾</emoji> ʀᴀᴍ:</b> {ram}%\n"
-        f"<b><emoji id='6291837599254322363'>💾</emoji> ᴅɪsᴋ:</b> {disk}%"
+        f"<b>😉 ᴜᴘᴛɪᴍᴇ:</b> {_uptime()}\n"
+        f"<b>☠️ ᴄᴘᴜ ʟᴏᴀᴅ:</b> {cpu}%\n"
+        f"<b>🐾 ʀᴀᴍ:</b> {ram}%\n"
+        f"<b>💾 ᴅɪsᴋ:</b> {disk}%"
         f"</blockquote>\n"
         f"<blockquote>"
-        f"<b><emoji id='5999100917645841519'>💀</emoji> ᴜsᴇʀʙᴏᴛs:</b> {ub_count} ᴀᴄᴛɪᴠᴇ\n"
-        f"<b><emoji id='5413546177683539369'>😈</emoji> ᴛᴀʀɢᴇᴛs:</b> {len(targets)}\n"
-        f"<b><emoji id='6001132493011425597'>⚡</emoji> ᴍᴏᴅᴇ:</b> {mode.upper()}"
+        f"<b>💀 ᴜsᴇʀʙᴏᴛs:</b> {ub_count} ᴀᴄᴛɪᴠᴇ\n"
+        f"<b>😈 ᴛᴀʀɢᴇᴛs:</b> {len(targets)}\n"
+        f"<b>⚡ ᴍᴏᴅᴇ:</b> {mode.upper()}"
         f"</blockquote>\n"
         f"•──────────────────────•\n"
         f"<blockquote>"
-        f"<b><emoji id='6294023338176028117'>💀</emoji> ✦ᴘᴏᴡᴇʀᴇᴅ ʙʏ » "
+        f"<b>💀 ✦ᴘᴏᴡᴇʀᴇᴅ ʙʏ » "
         f"<a href='{getattr(Config, 'SUPPORT_URL', 'https://t.me/Zcziiy')}'>"
         f"<spoiler>── 𝛞 𝛜 𝛈 𝛔 𝛈</spoiler></a></b>"
         f"</blockquote>\n"
@@ -228,11 +249,11 @@ async def _group_caption(group_name: str) -> str:
     mode     = await get_mode()
     return (
         f"<blockquote>"
-        f"<emoji id='6080176744709495278'>🐾</emoji> ʜᴇʟʟᴏ~ <b>ɪ'ᴍ ᴠᴄғɪɢʜᴛᴇʀ</b> ᴀɴᴅ ɪ'ᴍ ᴀʟɪᴠᴇ! ✨\n\n"
-        f"<emoji id='5413415116756500503'>☠️</emoji> <b>ᴜᴘᴛɪᴍᴇ   :</b> <code>{_uptime()}</code>\n"
-        f"<emoji id='5999100917645841519'>💀</emoji> <b>ᴜsᴇʀʙᴏᴛs:</b> {ub_count} ᴀᴄᴛɪᴠᴇ\n"
-        f"<emoji id='6001132493011425597'>⚡</emoji> <b>ᴍᴏᴅᴇ    :</b> {mode.upper()}\n\n"
-        f"<spoiler><emoji id='5262770659267735289'>⚡</emoji> ᴠᴄ ғɪɢʜᴛᴇʀ — ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʏᴜᴋɪᴛᴇᴀᴍ</spoiler>"
+        f"🐾 ʜᴇʟʟᴏ~ <b>ɪ'ᴍ ᴠᴄғɪɢʜᴛᴇʀ</b> ᴀɴᴅ ɪ'ᴍ ᴀʟɪᴠᴇ! ✨\n\n"
+        f"☠️ <b>ᴜᴘᴛɪᴍᴇ   :</b> <code>{_uptime()}</code>\n"
+        f"💀 <b>ᴜsᴇʀʙᴏᴛs:</b> {ub_count} ᴀᴄᴛɪᴠᴇ\n"
+        f"⚡ <b>ᴍᴏᴅᴇ    :</b> {mode.upper()}\n\n"
+        f"<spoiler>⚡ ᴠᴄ ғɪɢʜᴛᴇʀ — ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʏᴜᴋɪᴛᴇᴀᴍ</spoiler>"
         f"</blockquote>"
     )
 
@@ -296,8 +317,7 @@ async def start_private(client, message: Message):
         try:
             await client.send_message(
                 Config.LOG_CHANNEL,
-                f"<emoji id='6080176744709495278'>🐾</emoji> "
-                f"{mention} started the bot.\n"
+                f"🐾 {mention} started the bot.\n"
                 f"<b>ɪᴅ ➠</b> <code>{user.id}</code>",
             )
         except Exception:
@@ -367,10 +387,8 @@ async def on_bot_added(client, message: Message):
         panel   = await _group_panel()
 
         run = await message.reply_text(
-            f"<emoji id='6080202089311507876'>😎</emoji> "
-            f"<b>ʜᴇʟʟᴏ {message.chat.title}!</b>\n"
-            f"<emoji id='6001132493011425597'>💖</emoji> "
-            f"ᴛʜᴀɴᴋs ғᴏʀ ᴀᴅᴅɪɴɢ ᴍᴇ!"
+            f"😎 <b>ʜᴇʟʟᴏ {message.chat.title}!</b>\n"
+            f"💖 ᴛʜᴀɴᴋs ғᴏʀ ᴀᴅᴅɪɴɢ ᴍᴇ!"
         )
         await _raw_api("editMessageReplyMarkup", {
             "chat_id":      message.chat.id,
@@ -391,8 +409,7 @@ async def on_bot_added(client, message: Message):
             try:
                 await client.send_message(
                     Config.LOG_CHANNEL,
-                    f"<emoji id='6293940475371986355'>🎉</emoji> "
-                    f"<b>ᴀᴅᴅᴇᴅ ᴛᴏ ɢʀᴏᴜᴘ!</b>\n\n"
+                    f"🎉 <b>ᴀᴅᴅᴇᴅ ᴛᴏ ɢʀᴏᴜᴘ!</b>\n\n"
                     f"<b>📌 ɴᴀᴍᴇ :</b> {message.chat.title}\n"
                     f"<b>🆔 ɪᴅ :</b> <code>{message.chat.id}</code>",
                 )
