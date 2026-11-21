@@ -36,7 +36,44 @@ def load_handlers():
                 LOGGER("Loader").error(f"❌ Failed to load {name}: {e}")
 
 
+async def start_web_server():
+    """
+    Render, Koyeb, ya Railway ke liye health check web server.
+    PORT environment variable milte hi port bind karta hai taaki deploy timeout na ho.
+    """
+    port_str = os.environ.get("PORT")
+    if not port_str:
+        return None
+    try:
+        from aiohttp import web
+        port = int(port_str)
+        routes = web.RouteTableDef()
+
+        @routes.get("/")
+        async def index(_):
+            return web.Response(text="⚔️ VCFIGHTER is Alive and Running!")
+
+        @routes.get("/health")
+        async def health(_):
+            return web.Response(text="OK")
+
+        web_app = web.Application()
+        web_app.add_routes(routes)
+        runner = web.AppRunner(web_app)
+        await runner.setup()
+        site = web.TCPSite(runner, "0.0.0.0", port)
+        await site.start()
+        LOGGER("Web").info(f"✅ Web server listening on 0.0.0.0:{port} for Render/Cloud health checks")
+        return runner
+    except Exception as e:
+        LOGGER("Web").warning(f"Failed to start web server on port {port_str}: {e}")
+        return None
+
+
 async def init():
+    # Render port binding sabse pehle taaki port scan fail na ho
+    web_runner = await start_web_server()
+
     validate_config()
 
     LOGGER("DB").info("Connecting to MongoDB...")
@@ -84,6 +121,11 @@ async def init():
         await vc.stop_all()
     except Exception:
         pass
+    if web_runner:
+        try:
+            await web_runner.cleanup()
+        except Exception:
+            pass
     await app.stop()
 
 
