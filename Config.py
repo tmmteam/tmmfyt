@@ -26,6 +26,8 @@ def _get(key: str, default=None, required: bool = False):
 
 def _int(key: str, default: int, required: bool = False) -> int:
     val = _get(key, str(default), required)
+    if val is None or not str(val).strip():
+        return default
     try:
         return int(val)
     except (TypeError, ValueError):
